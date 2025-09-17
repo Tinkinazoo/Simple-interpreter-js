@@ -1,5 +1,8 @@
 JavaScript interpretator. First version.
-Project steucture:
+
+Project structure:
+
+```
 interpreter/
 │
 ├── src/                    # Исходные файлы
@@ -18,6 +21,8 @@ interpreter/
 ├── include/               # Заголовочные файлы для внешнего использования
 │
 ├── test/                  # Тесты
-│   └── test_programs/     # Примеры программ для интерпретатора
+│
+├── test_programs/         # Примеры программ для интерпретатора
 │
 └── CMakeLists.txt         # Файл сборки CMake
+```
