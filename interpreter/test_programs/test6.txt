@@ -1,0 +1,32 @@
+// Тест математических операций
+print "Testing math operations:";
+print "2 + 3 * 4 =";
+print 2 + 3 * 4; // Должно быть 14
+
+print "(2 + 3) * 4 =";
+print (2 + 3) * 4; // Должно быть 20
+
+print "10 / 3 =";
+print 10 / 3;
+
+// Тест строковых операций
+let firstName = "John";
+let lastName = "Doe";
+let fullName = firstName + " " + lastName;
+print fullName;
+
+// Тест логических операций
+print "true and false =";
+print true and false;
+print "true or false =";
+print true or false;
+print "not true =";
+print not true;
+
+// Тест сравнений
+print "5 > 3 =";
+print 5 > 3;
+print "5 == 3 =";
+print 5 == 3;
+print "5 != 3 =";
+print 5 != 3;
