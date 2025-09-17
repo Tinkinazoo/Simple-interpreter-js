@@ -47,6 +47,10 @@ interpreter/
     ```bash
     make
     ```
+3.1 Пересборка проекта:
+    ```bash
+    make clean && make
+    ```
 
 4.  После успешной сборки в папке `build` появится исполняемый файл с именем `brainfuck` (или другим, указанным в CMakeLists.txt).
 
