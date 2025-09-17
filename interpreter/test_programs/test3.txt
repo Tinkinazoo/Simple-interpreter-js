@@ -1,0 +1,36 @@
+// Простой цикл while
+let i = 0;
+print "Counting from 0 to 4:";
+while (i < 5) {
+    print i;
+    i = i + 1;
+}
+
+// Цикл с условием
+let counter = 10;
+print "Countdown from 10:";
+while (counter > 0) {
+    print counter;
+    counter = counter - 1;
+}
+print "Blastoff!";
+
+// Сумма чисел
+let sum = 0;
+let num = 1;
+print "Sum of numbers from 1 to 10:";
+while (num <= 10) {
+    sum = sum + num;
+    num = num + 1;
+}
+print sum;
+
+// Бесконечный цикл с break (закомментирован для безопасности)
+// let x = 0;
+// while (true) {
+//     print x;
+//     x = x + 1;
+//     if (x > 5) {
+//         break;
+//     }
+// }
