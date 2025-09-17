@@ -1,0 +1,33 @@
+// Базовые операции с переменными
+let x = 10;
+let y = 5;
+let sum = x + y;
+let product = x * y;
+let difference = x - y;
+let quotient = x / y;
+
+print "x =";
+print x;
+print "y =";
+print y;
+print "x + y =";
+print sum;
+print "x * y =";
+print product;
+print "x - y =";
+print difference;
+print "x / y =";
+print quotient;
+
+// Строковые операции
+let name = "John";
+let greeting = "Hello, " + name + "!";
+print greeting;
+
+// Булевы значения
+let isTrue = true;
+let isFalse = false;
+print "isTrue:";
+print isTrue;
+print "isFalse:";
+print isFalse;
