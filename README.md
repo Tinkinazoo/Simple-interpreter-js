@@ -40,7 +40,7 @@ interpreter/
 
 2.  Сгенерируйте Makefile с помощью CMake:
     ```bash
-    cmake ..
+    cmake CMakeLists.txt
     ```
 
 3.  Соберите проект:
