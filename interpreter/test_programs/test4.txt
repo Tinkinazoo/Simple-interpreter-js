@@ -1,0 +1,39 @@
+// Простая функция
+fun greet(name) {
+    return "Hello, " + name + "!";
+}
+
+let message = greet("Alice");
+print message;
+
+// Функция с несколькими параметрами
+fun add(a, b) {
+    return a + b;
+}
+
+let result = add(5, 3);
+print "5 + 3 =";
+print result;
+
+// Факториал
+fun factorial(n) {
+    if (n <= 1) {
+        return 1;
+    }
+    return n * factorial(n - 1);
+}
+
+print "Factorial of 5:";
+print factorial(5);
+
+// Функция без возвращаемого значения
+fun printNumbers(max) {
+    let i = 1;
+    while (i <= max) {
+        print i;
+        i = i + 1;
+    }
+}
+
+print "Numbers from 1 to 3:";
+printNumbers(3);
