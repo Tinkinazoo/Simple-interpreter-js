@@ -1,0 +1,7 @@
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/interpreter.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/edit_cache.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/rebuild_cache.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/list_install_components.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/install.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/install/local.dir
+/home/art/projects/InterpretatorJS/Simple-interpreter-js/interpreter/CMakeFiles/install/strip.dir

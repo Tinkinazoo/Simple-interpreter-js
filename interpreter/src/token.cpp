@@ -1,13 +1,15 @@
 #include "token.h"
 #include <map>
 #include <stdexcept>
+#include <ostream>
 
-Token::Token(TokenType type, const std::string& lexeme, int line)
-    : type(type), lexeme(lexeme), line(line) {}
+Token::Token(TokenType type, const std::string& lexeme, int line, int column)
+    : type(type), lexeme(lexeme), line(line), column(column) {}
 
 std::ostream& operator<<(std::ostream& os, const Token& token) {
     os << "Token(" << tokenTypeToString(token.type) 
-       << ", '" << token.lexeme << "', line: " << token.line << ")";
+       << ", '" << token.lexeme << "', line: " << token.line 
+       << ", column: " << token.column << ")";
     return os;
 }
 

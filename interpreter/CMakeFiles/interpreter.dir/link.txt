@@ -1,0 +1,1 @@
+/usr/bin/c++ -g -Wall -Wextra -Wpedantic -g CMakeFiles/interpreter.dir/src/main.cpp.o CMakeFiles/interpreter.dir/src/lexer.cpp.o CMakeFiles/interpreter.dir/src/token.cpp.o CMakeFiles/interpreter.dir/src/parser.cpp.o CMakeFiles/interpreter.dir/src/ast.cpp.o CMakeFiles/interpreter.dir/src/environment.cpp.o CMakeFiles/interpreter.dir/src/interpreter.cpp.o -o interpreter 

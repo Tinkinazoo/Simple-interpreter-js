@@ -2,99 +2,34 @@
 #define LEXER_H
 
 #include <string>
-#include <vector>
-#include <unordered_map>
-#include <cctype>
-
-enum class TokenType {
-    // Литералы
-    NUMBER,
-    BIGINT,
-    STRING,
-    IDENTIFIER,
-    
-    // Ключевые слова
-    LET,
-    CONST,
-    IF,
-    ELSE,
-    WHILE,
-    FOR,
-    FUNCTION,
-    RETURN,
-    PRINT,
-    CLASS,
-    EXTENDS,
-    THIS,
-    SUPER,
-    NEW,
-    NULL_TOKEN,
-    TRUE,
-    FALSE,
-    
-    // Операторы
-    PLUS,
-    MINUS,
-    MULTIPLY,
-    DIVIDE,
-    ASSIGN,
-    EQUALS,
-    NOT_EQUALS,
-    LESS,
-    GREATER,
-    LESS_EQUAL,
-    GREATER_EQUAL,
-    
-    // Разделители
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    LBRACKET,
-    RBRACKET,
-    SEMICOLON,
-    COMMA,
-    DOT,
-    COLON,
-    
-    // Специальные
-    END_OF_FILE,
-    UNKNOWN
-};
-
-struct Token {
-    TokenType type;
-    std::string value;
-    int line;
-    int column;
-    
-    Token(TokenType type, const std::string& value, int line, int column)
-        : type(type), value(value), line(line), column(column) {}
-};
+#include "token.h"  // Используем Token из token.h
 
 class Lexer {
-public:
-    Lexer(const std::string& source);
-    Token nextToken();
-    Token peekToken();
-    
 private:
     std::string source;
-    size_t position;
+    int start;
+    int current;
     int line;
     int column;
+
+    char advance();
+    char peek();
+    char peekNext();
+    bool isAtEnd();
+    bool isDigit(char c);
+    bool isAlpha(char c);
+    bool isAlphaNumeric(char c);
     
-    char currentChar();
-    char nextChar();
+    Token string();
+    Token number();
+    Token identifier();
+    TokenType checkKeyword(int start, int length, const std::string& rest, TokenType type);
     void skipWhitespace();
-    void skipComment();
-    
-    Token readNumber();
-    Token readBigInt();
-    Token readString();
-    Token readIdentifier();
-    
-    static std::unordered_map<std::string, TokenType> keywords;
+    Token scanToken();
+
+public:
+    Lexer(const std::string& source);
+    Token getNextToken();
 };
 
-#endif
+#endif // LEXER_H

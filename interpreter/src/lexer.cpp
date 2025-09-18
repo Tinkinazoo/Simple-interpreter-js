@@ -1,240 +1,181 @@
 #include "lexer.h"
-#include <iostream>
-
-std::unordered_map<std::string, TokenType> Lexer::keywords = {
-    {"let", TokenType::LET},
-    {"const", TokenType::CONST},
-    {"if", TokenType::IF},
-    {"else", TokenType::ELSE},
-    {"while", TokenType::WHILE},
-    {"for", TokenType::FOR},
-    {"function", TokenType::FUNCTION},
-    {"return", TokenType::RETURN},
-    {"print", TokenType::PRINT},
-    {"class", TokenType::CLASS},
-    {"extends", TokenType::EXTENDS},
-    {"this", TokenType::THIS},
-    {"super", TokenType::SUPER},
-    {"new", TokenType::NEW},
-    {"null", TokenType::NULL_TOKEN},
-    {"true", TokenType::TRUE},
-    {"false", TokenType::FALSE},
-    {"BigInt", TokenType::BIGINT}
-};
+#include <cctype>
+#include <map>
+#include <stdexcept>
 
 Lexer::Lexer(const std::string& source) 
-    : source(source), position(0), line(1), column(1) {}
+    : source(source), start(0), current(0), line(1), column(1) {}
 
-char Lexer::currentChar() {
-    if (position >= source.length()) return '\0';
-    return source[position];
+char Lexer::advance() {
+    if (isAtEnd()) return '\0';
+    char c = source[current++];
+    if (c == '\n') {
+        line++;
+        column = 1;
+    } else {
+        column++;
+    }
+    return c;
 }
 
-char Lexer::nextChar() {
-    if (position >= source.length()) return '\0';
-    position++;
-    column++;
-    return currentChar();
+char Lexer::peek() {
+    if (isAtEnd()) return '\0';
+    return source[current];
+}
+
+char Lexer::peekNext() {
+    if (current + 1 >= source.length()) return '\0';
+    return source[current + 1];
+}
+
+bool Lexer::isAtEnd() {
+    return current >= source.length();
+}
+
+bool Lexer::isDigit(char c) {
+    return c >= '0' && c <= '9';
+}
+
+bool Lexer::isAlpha(char c) {
+    return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+}
+
+bool Lexer::isAlphaNumeric(char c) {
+    return isAlpha(c) || isDigit(c);
+}
+
+Token Lexer::string() {
+    while (peek() != '"' && !isAtEnd()) {
+        if (peek() == '\n') line++;
+        advance();
+    }
+
+    if (isAtEnd()) {
+        throw std::runtime_error("Unterminated string");
+    }
+
+    advance(); // Закрывающая кавычка
+
+    std::string value = source.substr(start + 1, current - start - 2);
+    return Token(TokenType::STRING, value, line, column);
+}
+
+Token Lexer::number() {
+    while (isDigit(peek())) advance();
+
+    if (peek() == '.' && isDigit(peekNext())) {
+        advance();
+        while (isDigit(peek())) advance();
+    }
+
+    std::string value = source.substr(start, current - start);
+    return Token(TokenType::NUMBER, value, line, column);
+}
+
+Token Lexer::identifier() {
+    while (isAlphaNumeric(peek())) advance();
+
+    std::string text = source.substr(start, current - start);
+    TokenType type = TokenType::IDENTIFIER;
+
+    // Проверка ключевых слов
+    if (text == "let") type = TokenType::LET;
+    else if (text == "if") type = TokenType::IF;
+    else if (text == "else") type = TokenType::ELSE;
+    else if (text == "while") type = TokenType::WHILE;
+    else if (text == "for") type = TokenType::FOR;
+    else if (text == "fun") type = TokenType::FUN;
+    else if (text == "return") type = TokenType::RETURN;
+    else if (text == "print") type = TokenType::PRINT;
+    else if (text == "true") type = TokenType::TRUE;
+    else if (text == "false") type = TokenType::FALSE;
+    else if (text == "and") type = TokenType::AND;
+    else if (text == "or") type = TokenType::OR;
+    else if (text == "not") type = TokenType::NOT;
+
+    return Token(type, text, line, column);
 }
 
 void Lexer::skipWhitespace() {
-    while (isspace(currentChar())) {
-        if (currentChar() == '\n') {
-            line++;
-            column = 0;
+    while (true) {
+        char c = peek();
+        switch (c) {
+            case ' ':
+            case '\r':
+            case '\t':
+                advance();
+                break;
+            case '\n':
+                line++;
+                column = 1;
+                advance();
+                break;
+            case '/':
+                if (peekNext() == '/') {
+                    // Комментарий до конца строки
+                    while (peek() != '\n' && !isAtEnd()) advance();
+                } else {
+                    return;
+                }
+                break;
+            default:
+                return;
         }
-        nextChar();
     }
 }
 
-void Lexer::skipComment() {
-    if (currentChar() == '#') {
-        while (currentChar() != '\n' && currentChar() != '\0') {
-            nextChar();
-        }
-    }
-    if (currentChar() == '/' && position + 1 < source.length() && source[position + 1] == '/') {
-        while (currentChar() != '\n' && currentChar() != '\0') {
-            nextChar();
-        }
-    }
-}
-
-Token Lexer::readNumber() {
-    std::string value;
-    int startColumn = column;
-    bool isFloat = false;
-    
-    while (isdigit(currentChar()) || currentChar() == '.') {
-        if (currentChar() == '.') {
-            if (isFloat) break; // Две точки - ошибка
-            isFloat = true;
-        }
-        value += currentChar();
-        nextChar();
-    }
-    
-    // Проверяем, не является ли это BigInt
-    if (currentChar() == 'n' && !isFloat) {
-        nextChar();
-        return {TokenType::BIGINT, value, line, startColumn};
-    }
-    
-    return {TokenType::NUMBER, value, line, startColumn};
-}
-
-Token Lexer::readBigInt() {
-    std::string value;
-    int startColumn = column;
-    
-    while (isdigit(currentChar())) {
-        value += currentChar();
-        nextChar();
-    }
-    
-    if (currentChar() == 'n') {
-        nextChar();
-    }
-    
-    return {TokenType::BIGINT, value, line, startColumn};
-}
-
-Token Lexer::readString() {
-    std::string value;
-    char delimiter = currentChar();
-    int startColumn = column;
-    nextChar(); // Пропускаем открывающую кавычку
-    
-    while (currentChar() != delimiter && currentChar() != '\0') {
-        if (currentChar() == '\\') {
-            nextChar(); // Пропускаем обратный слеш
-            switch (currentChar()) {
-                case 'n': value += '\n'; break;
-                case 't': value += '\t'; break;
-                case '\\': value += '\\'; break;
-                case '"': value += '"'; break;
-                case '\'': value += '\''; break;
-                default: value += currentChar(); break;
-            }
-        } else {
-            value += currentChar();
-        }
-        nextChar();
-    }
-    
-    if (currentChar() == delimiter) {
-        nextChar(); // Пропускаем закрывающую кавычку
-    }
-    
-    return {TokenType::STRING, value, line, startColumn};
-}
-
-Token Lexer::readIdentifier() {
-    std::string value;
-    int startColumn = column;
-    
-    while (isalnum(currentChar()) || currentChar() == '_') {
-        value += currentChar();
-        nextChar();
-    }
-    
-    auto it = keywords.find(value);
-    if (it != keywords.end()) {
-        return {it->second, value, line, startColumn};
-    }
-    
-    return {TokenType::IDENTIFIER, value, line, startColumn};
-}
-
-Token Lexer::nextToken() {
+Token Lexer::scanToken() {
     skipWhitespace();
-    skipComment();
-    skipWhitespace();
-    
-    if (currentChar() == '\0') {
-        return {TokenType::END_OF_FILE, "", line, column};
-    }
-    
-    char c = currentChar();
-    int startColumn = column;
-    
-    // Числа
-    if (isdigit(c)) {
-        return readNumber();
-    }
-    
-    // Строки
-    if (c == '"' || c == '\'') {
-        return readString();
-    }
-    
-    // Идентификаторы и ключевые слова
-    if (isalpha(c) || c == '_') {
-        return readIdentifier();
-    }
-    
-    // Операторы и разделители
+    start = current;
+
+    if (isAtEnd()) return Token(TokenType::END_OF_FILE, "", line, column);
+
+    char c = advance();
+
+    if (isAlpha(c)) return identifier();
+    if (isDigit(c)) return number();
+
     switch (c) {
-        case '+': nextChar(); return {TokenType::PLUS, "+", line, startColumn};
-        case '-': nextChar(); return {TokenType::MINUS, "-", line, startColumn};
-        case '*': nextChar(); return {TokenType::MULTIPLY, "*", line, startColumn};
-        case '/': nextChar(); return {TokenType::DIVIDE, "/", line, startColumn};
-        case '=': 
-            nextChar();
-            if (currentChar() == '=') {
-                nextChar();
-                return {TokenType::EQUALS, "==", line, startColumn};
+        case '(': return Token(TokenType::LEFT_PAREN, "(", line, column);
+        case ')': return Token(TokenType::RIGHT_PAREN, ")", line, column);
+        case '{': return Token(TokenType::LEFT_BRACE, "{", line, column);
+        case '}': return Token(TokenType::RIGHT_BRACE, "}", line, column);
+        case ',': return Token(TokenType::COMMA, ",", line, column);
+        case ';': return Token(TokenType::SEMICOLON, ";", line, column);
+        case '+': return Token(TokenType::PLUS, "+", line, column);
+        case '-': return Token(TokenType::MINUS, "-", line, column);
+        case '*': return Token(TokenType::MULTIPLY, "*", line, column);
+        case '/': return Token(TokenType::DIVIDE, "/", line, column);
+        case '=':
+            if (peek() == '=') {
+                advance();
+                return Token(TokenType::EQUALS, "==", line, column);
             }
-            return {TokenType::ASSIGN, "=", line, startColumn};
+            return Token(TokenType::ASSIGN, "=", line, column);
         case '!':
-            nextChar();
-            if (currentChar() == '=') {
-                nextChar();
-                return {TokenType::NOT_EQUALS, "!=", line, startColumn};
+            if (peek() == '=') {
+                advance();
+                return Token(TokenType::NOT_EQUALS, "!=", line, column);
             }
             break;
         case '<':
-            nextChar();
-            if (currentChar() == '=') {
-                nextChar();
-                return {TokenType::LESS_EQUAL, "<=", line, startColumn};
+            if (peek() == '=') {
+                advance();
+                return Token(TokenType::LESS_EQUAL, "<=", line, column);
             }
-            return {TokenType::LESS, "<", line, startColumn};
+            return Token(TokenType::LESS, "<", line, column);
         case '>':
-            nextChar();
-            if (currentChar() == '=') {
-                nextChar();
-                return {TokenType::GREATER_EQUAL, ">=", line, startColumn};
+            if (peek() == '=') {
+                advance();
+                return Token(TokenType::GREATER_EQUAL, ">=", line, column);
             }
-            return {TokenType::GREATER, ">", line, startColumn};
-        case '(': nextChar(); return {TokenType::LPAREN, "(", line, startColumn};
-        case ')': nextChar(); return {TokenType::RPAREN, ")", line, startColumn};
-        case '{': nextChar(); return {TokenType::LBRACE, "{", line, startColumn};
-        case '}': nextChar(); return {TokenType::RBRACE, "}", line, startColumn};
-        case '[': nextChar(); return {TokenType::LBRACKET, "[", line, startColumn};
-        case ']': nextChar(); return {TokenType::RBRACKET, "]", line, startColumn};
-        case ';': nextChar(); return {TokenType::SEMICOLON, ";", line, startColumn};
-        case ',': nextChar(); return {TokenType::COMMA, ",", line, startColumn};
-        case '.': nextChar(); return {TokenType::DOT, ".", line, startColumn};
-        case ':': nextChar(); return {TokenType::COLON, ":", line, startColumn};
+            return Token(TokenType::GREATER, ">", line, column);
+        case '"': return string();
     }
-    
-    // Неизвестный символ
-    std::string unknown(1, c);
-    nextChar();
-    return {TokenType::UNKNOWN, unknown, line, startColumn};
+
+    return Token(TokenType::ERROR, std::string(1, c), line, column);
 }
 
-Token Lexer::peekToken() {
-    size_t savedPosition = position;
-    int savedLine = line;
-    int savedColumn = column;
-    
-    Token token = nextToken();
-    
-    position = savedPosition;
-    line = savedLine;
-    column = savedColumn;
-    
-    return token;
+Token Lexer::getNextToken() {
+    return scanToken();
 }

@@ -16,15 +16,15 @@ public:
     std::string stringValue;
     bool booleanValue;
     
-    // Для функций
+    // Для функций - используем shared_ptr вместо unique_ptr
     std::vector<std::string> parameters;
-    std::unique_ptr<Block> body;
+    std::shared_ptr<Block> body;
     
     Value();
     Value(double value);
     Value(const std::string& value);
     Value(bool value);
-    Value(const std::vector<std::string>& params, std::unique_ptr<Block> body);
+    Value(const std::vector<std::string>& params, std::shared_ptr<Block> body);
     
     std::string toString() const;
 };

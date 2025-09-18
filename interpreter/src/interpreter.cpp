@@ -2,6 +2,13 @@
 #include <iostream>
 #include <stdexcept>
 
+// Класс для передачи значения return
+class ReturnValue {
+public:
+    Value value;
+    ReturnValue(const Value& val) : value(val) {}
+};
+
 Interpreter::Interpreter() {
     globalEnv = std::make_shared<Environment>();
     currentEnv = globalEnv;
@@ -118,9 +125,12 @@ Value Interpreter::evaluateExpression(const Expression& expr) {
         
         try {
             executeBlock(*func.body, funcEnv);
-        } catch (const ReturnStatement& returnValue) {
+        } catch (const ReturnValue& returnValue) {
             currentEnv = oldEnv;
-            return returnValue.value ? evaluateExpression(*returnValue.value) : Value();
+            return returnValue.value;
+        } catch (const ReturnStatement&) {
+            currentEnv = oldEnv;
+            return Value();
         }
         
         currentEnv = oldEnv;
@@ -159,14 +169,19 @@ void Interpreter::executeStatement(const Statement& stmt) {
         std::cout << value.toString() << std::endl;
     }
     else if (auto returnStmt = dynamic_cast<const ReturnStatement*>(&stmt)) {
-        throw *returnStmt;
+        Value returnValue = returnStmt->value ? evaluateExpression(*returnStmt->value) : Value();
+        throw ReturnValue(returnValue);
     }
     else if (auto funcDecl = dynamic_cast<const FunctionDeclaration*>(&stmt)) {
-        Value funcValue(funcDecl->parameters, std::make_unique<Block>(*funcDecl->body));
+        // Используем shared_ptr вместо unique_ptr
+        Value funcValue(funcDecl->parameters, std::shared_ptr<Block>(funcDecl->body.get()));
         currentEnv->define(funcDecl->functionName, funcValue);
     }
     else if (auto block = dynamic_cast<const Block*>(&stmt)) {
         executeBlock(*block, currentEnv);
+    }
+    else if (auto exprStmt = dynamic_cast<const ExpressionStatement*>(&stmt)) {
+        evaluateExpression(*exprStmt->expression);
     }
 }
 
@@ -175,7 +190,17 @@ void Interpreter::executeBlock(const Block& block, std::shared_ptr<Environment> 
     currentEnv = env;
     
     for (const auto& stmt : block.statements) {
-        executeStatement(*stmt);
+        try {
+            executeStatement(*stmt);
+        } catch (const ReturnValue&) {
+            // Пробрасываем ReturnValue наверх
+            currentEnv = oldEnv;
+            throw;
+        } catch (const ReturnStatement&) {
+            // Для обратной совместимости
+            currentEnv = oldEnv;
+            throw;
+        }
     }
     
     currentEnv = oldEnv;

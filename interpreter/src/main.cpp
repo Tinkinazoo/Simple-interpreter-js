@@ -39,7 +39,8 @@ void runRepl() {
             Parser parser(lexer);
             auto program = parser.parse();
             
-            interpreter.interpret(*program);
+            // Приводим тип к Program&
+            interpreter.interpret(static_cast<Program&>(*program));
         } catch (const std::exception& e) {
             std::cerr << "Error: " << e.what() << std::endl;
         }
@@ -57,7 +58,8 @@ int main(int argc, char* argv[]) {
             auto program = parser.parse();
             
             Interpreter interpreter;
-            interpreter.interpret(*program);
+            // Приводим тип к Program&
+            interpreter.interpret(static_cast<Program&>(*program));
             
         } catch (const std::exception& e) {
             std::cerr << "Error: " << e.what() << std::endl;

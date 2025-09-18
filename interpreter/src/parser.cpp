@@ -2,7 +2,7 @@
 #include <stdexcept>
 #include <iostream>
 
-Parser::Parser(Lexer& lexer) : lexer(lexer) {
+Parser::Parser(Lexer& lexer) : lexer(lexer), currentToken(TokenType::END_OF_FILE, "", 0, 0) {
     advance();
 }
 

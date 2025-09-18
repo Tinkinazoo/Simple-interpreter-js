@@ -4,47 +4,41 @@
 #include "lexer.h"
 #include "ast.h"
 #include <memory>
-#include <stdexcept>
-
-class ParserError : public std::runtime_error {
-public:
-    ParserError(const std::string& message) : std::runtime_error(message) {}
-};
 
 class Parser {
-public:
-    Parser(Lexer& lexer) : lexer(lexer) {
-        currentToken = lexer.nextToken();
-    }
-    
-    std::unique_ptr<ASTNode> parse();
-    
 private:
     Lexer& lexer;
-    Token currentToken;
-    
-    void eat(TokenType expectedType);
+    Token currentToken{TokenType::END_OF_FILE, "", 0, 0}; // Инициализация по умолчанию
+
+    void advance();
     Token expect(TokenType expectedType, const std::string& errorMessage);
     
-    // Правила грамматики
-    std::unique_ptr<ASTNode> parseStatement();
-    std::unique_ptr<ASTNode> parseExpression();
-    std::unique_ptr<ASTNode> parsePrimary();
-    std::unique_ptr<ASTNode> parseMultiplicative();
-    std::unique_ptr<ASTNode> parseAdditive();
-    std::unique_ptr<ASTNode> parseComparison();
-    std::unique_ptr<ASTNode> parseAssignment();
-    std::unique_ptr<ASTNode> parseVariableDeclaration();
-    std::unique_ptr<ASTNode> parsePrintStatement();
-    std::unique_ptr<ASTNode> parseIfStatement();
-    std::unique_ptr<ASTNode> parseWhileStatement();
-    std::unique_ptr<ASTNode> parseBlock();
-    std::unique_ptr<ASTNode> parseFunctionExpression();
-    std::unique_ptr<ASTNode> parseCallExpression(std::unique_ptr<ASTNode> callee);
-    std::unique_ptr<ASTNode> parseReturnStatement();
-    std::unique_ptr<ASTNode> parseClassDeclaration();
-    std::unique_ptr<ASTNode> parseNewExpression();
-    std::unique_ptr<ASTNode> parsePropertyAccess(std::unique_ptr<ASTNode> object);
+    std::unique_ptr<Expression> parseExpression();
+    std::unique_ptr<Expression> parseLogicalOr();
+    std::unique_ptr<Expression> parseLogicalAnd();
+    std::unique_ptr<Expression> parseEquality();
+    std::unique_ptr<Expression> parseComparison();
+    std::unique_ptr<Expression> parseTerm();
+    std::unique_ptr<Expression> parseFactor();
+    std::unique_ptr<Expression> parseUnary();
+    std::unique_ptr<Expression> parsePrimary();
+    std::unique_ptr<FunctionCall> parseFunctionCall(const std::string& functionName);
+    
+    std::unique_ptr<Statement> parseStatement();
+    std::unique_ptr<VariableDeclaration> parseVariableDeclaration();
+    std::unique_ptr<Assignment> parseAssignment();
+    std::unique_ptr<IfStatement> parseIfStatement();
+    std::unique_ptr<WhileStatement> parseWhileStatement();
+    std::unique_ptr<Statement> parseForStatement();
+    std::unique_ptr<FunctionDeclaration> parseFunctionDeclaration();
+    std::unique_ptr<ReturnStatement> parseReturnStatement();
+    std::unique_ptr<PrintStatement> parsePrintStatement();
+    std::unique_ptr<Block> parseBlock();
+    std::unique_ptr<ExpressionStatement> parseExpressionStatement();
+
+public:
+    Parser(Lexer& lexer);
+    std::unique_ptr<Program> parse();
 };
 
-#endif
+#endif // PARSER_H

@@ -7,8 +7,8 @@ Value::Value() : type(NIL), numberValue(0), booleanValue(false) {}
 Value::Value(double value) : type(NUMBER), numberValue(value), booleanValue(false) {}
 Value::Value(const std::string& value) : type(STRING), stringValue(value), booleanValue(false) {}
 Value::Value(bool value) : type(BOOLEAN), booleanValue(value), numberValue(0) {}
-Value::Value(const std::vector<std::string>& params, std::unique_ptr<Block> body)
-    : type(FUNCTION), parameters(params), body(std::move(body)), numberValue(0), booleanValue(false) {}
+Value::Value(const std::vector<std::string>& params, std::shared_ptr<Block> body)
+    : type(FUNCTION), parameters(params), body(body), numberValue(0), booleanValue(false) {}
 
 std::string Value::toString() const {
     switch (type) {
