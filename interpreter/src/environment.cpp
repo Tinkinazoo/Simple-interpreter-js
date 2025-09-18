@@ -1,14 +1,108 @@
 #include "environment.h"
+#include "ast.h" // Теперь подключаем здесь, где Value уже объявлен
 #include <stdexcept>
 #include <sstream>
 
 // Value implementations
-Value::Value() : type(NIL), numberValue(0), booleanValue(false) {}
-Value::Value(double value) : type(NUMBER), numberValue(value), booleanValue(false) {}
-Value::Value(const std::string& value) : type(STRING), stringValue(value), booleanValue(false) {}
-Value::Value(bool value) : type(BOOLEAN), booleanValue(value), numberValue(0) {}
+Value::Value() : type(NIL), numberValue(0), booleanValue(false), 
+                arrayValue(nullptr), objectValue(nullptr) {}
+
+Value::Value(double value) : type(NUMBER), numberValue(value), booleanValue(false),
+                           arrayValue(nullptr), objectValue(nullptr) {}
+
+Value::Value(const std::string& value) : type(STRING), stringValue(value), booleanValue(false),
+                                       arrayValue(nullptr), objectValue(nullptr) {}
+
+Value::Value(bool value) : type(BOOLEAN), booleanValue(value), numberValue(0),
+                         arrayValue(nullptr), objectValue(nullptr) {}
+
 Value::Value(const std::vector<std::string>& params, std::shared_ptr<Block> body)
-    : type(FUNCTION), parameters(params), body(body), numberValue(0), booleanValue(false) {}
+    : type(FUNCTION), parameters(params), body(body), numberValue(0), booleanValue(false),
+      arrayValue(nullptr), objectValue(nullptr) {}
+
+Value::Value(const std::vector<Value>& array) 
+    : type(ARRAY), numberValue(0), booleanValue(false), objectValue(nullptr) {
+    arrayValue = std::make_unique<std::vector<Value>>(array);
+}
+
+Value::Value(const std::unordered_map<std::string, Value>& object)
+    : type(OBJECT), numberValue(0), booleanValue(false), arrayValue(nullptr) {
+    objectValue = std::make_unique<std::unordered_map<std::string, Value>>(object);
+}
+
+// Rule of Five implementations
+Value::~Value() = default;
+
+Value::Value(const Value& other)
+    : type(other.type),
+      numberValue(other.numberValue),
+      stringValue(other.stringValue),
+      booleanValue(other.booleanValue),
+      parameters(other.parameters),
+      body(other.body) {
+    if (other.arrayValue) {
+        arrayValue = std::make_unique<std::vector<Value>>(*other.arrayValue);
+    }
+    if (other.objectValue) {
+        objectValue = std::make_unique<std::unordered_map<std::string, Value>>(*other.objectValue);
+    }
+}
+
+Value::Value(Value&& other) noexcept
+    : type(other.type),
+      numberValue(other.numberValue),
+      stringValue(std::move(other.stringValue)),
+      booleanValue(other.booleanValue),
+      parameters(std::move(other.parameters)),
+      body(std::move(other.body)),
+      arrayValue(std::move(other.arrayValue)),
+      objectValue(std::move(other.objectValue)) {
+    other.type = NIL;
+    other.numberValue = 0;
+    other.booleanValue = false;
+}
+
+Value& Value::operator=(const Value& other) {
+    if (this != &other) {
+        type = other.type;
+        numberValue = other.numberValue;
+        stringValue = other.stringValue;
+        booleanValue = other.booleanValue;
+        parameters = other.parameters;
+        body = other.body;
+        
+        if (other.arrayValue) {
+            arrayValue = std::make_unique<std::vector<Value>>(*other.arrayValue);
+        } else {
+            arrayValue.reset();
+        }
+        
+        if (other.objectValue) {
+            objectValue = std::make_unique<std::unordered_map<std::string, Value>>(*other.objectValue);
+        } else {
+            objectValue.reset();
+        }
+    }
+    return *this;
+}
+
+Value& Value::operator=(Value&& other) noexcept {
+    if (this != &other) {
+        type = other.type;
+        numberValue = other.numberValue;
+        stringValue = std::move(other.stringValue);
+        booleanValue = other.booleanValue;
+        parameters = std::move(other.parameters);
+        body = std::move(other.body);
+        arrayValue = std::move(other.arrayValue);
+        objectValue = std::move(other.objectValue);
+        
+        other.type = NIL;
+        other.numberValue = 0;
+        other.booleanValue = false;
+    }
+    return *this;
+}
 
 std::string Value::toString() const {
     switch (type) {
@@ -20,12 +114,32 @@ std::string Value::toString() const {
         case STRING: return stringValue;
         case BOOLEAN: return booleanValue ? "true" : "false";
         case FUNCTION: return "<function>";
-        case NIL: return "nil";
+        case NIL: return "null";
+        case ARRAY: {
+            if (!arrayValue) return "[]";
+            std::string result = "[";
+            for (size_t i = 0; i < arrayValue->size(); i++) {
+                if (i > 0) result += ", ";
+                result += (*arrayValue)[i].toString();
+            }
+            return result + "]";
+        }
+        case OBJECT: {
+            if (!objectValue) return "{}";
+            std::string result = "{";
+            bool first = true;
+            for (const auto& [key, value] : *objectValue) {
+                if (!first) result += ", ";
+                result += key + ": " + value.toString();
+                first = false;
+            }
+            return result + "}";
+        }
         default: return "unknown";
     }
 }
 
-// Environment implementations
+// Environment implementations (остаются без изменений)
 Environment::Environment() : parent(nullptr) {}
 Environment::Environment(std::shared_ptr<Environment> parent) : parent(parent) {}
 

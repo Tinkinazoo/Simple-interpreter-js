@@ -136,6 +136,65 @@ Value Interpreter::evaluateExpression(const Expression& expr) {
         currentEnv = oldEnv;
         return Value();
     }
+    else if (auto array = dynamic_cast<const ArrayLiteral*>(&expr)) {
+        std::vector<Value> elements;
+        for (const auto& element : array->elements) {
+            elements.push_back(evaluateExpression(*element));
+        }
+        // Теперь это работает, так как есть конструктор Value(const vector<Value>&)
+        return Value(elements);
+    } 
+    else if (auto object = dynamic_cast<const ObjectLiteral*>(&expr)) {
+        std::unordered_map<std::string, Value> properties;
+        for (const auto& [key, value] : object->properties) {
+            properties[key] = evaluateExpression(*value);
+        }
+        // Теперь это работает, так как есть конструктор Value(const unordered_map<string, Value>&)
+        return Value(properties);
+    }     
+    else if (auto indexExpr = dynamic_cast<const IndexExpression*>(&expr)) {
+        Value objectVal = evaluateExpression(*indexExpr->object);
+        Value indexVal = evaluateExpression(*indexExpr->index);
+        
+        if (objectVal.type == Value::ARRAY && indexVal.type == Value::NUMBER) {
+            int index = static_cast<int>(indexVal.numberValue);
+            
+            // ПРОВЕРКА: arrayValue может быть nullptr
+            if (!objectVal.arrayValue) {
+                throw std::runtime_error("Array is null");
+            }
+            
+            // ИСПРАВЛЕНИЕ: разыменовываем unique_ptr перед доступом
+            if (index < 0 || index >= objectVal.arrayValue->size()) {
+                throw std::runtime_error("Array index out of bounds");
+            }
+            
+            return (*objectVal.arrayValue)[index]; // РАЗЫМЕНОВЫВАЕМ указатель!
+        }
+        throw std::runtime_error("Cannot index this type");
+    }  
+    else if (auto propAccess = dynamic_cast<const PropertyAccess*>(&expr)) {
+        Value objectVal = evaluateExpression(*propAccess->object);
+        
+        if (objectVal.type == Value::OBJECT) {
+            // ПРОВЕРКА: objectValue может быть nullptr
+            if (!objectVal.objectValue) {
+                throw std::runtime_error("Object is null");
+            }
+            
+            // ИСПРАВЛЕНИЕ: разыменовываем unique_ptr перед доступом
+            auto it = objectVal.objectValue->find(propAccess->property);
+            if (it != objectVal.objectValue->end()) {
+                return it->second;
+            }
+            throw std::runtime_error("Property not found: " + propAccess->property);
+        }
+        throw std::runtime_error("Cannot access properties of this type");
+    }
+    
+    else if (dynamic_cast<const NullLiteral*>(&expr)) {
+        return Value(); // Пустое значение
+    }
     
     return Value();
 }
@@ -187,6 +246,116 @@ void Interpreter::executeStatement(const Statement& stmt) {
     else if (auto exprStmt = dynamic_cast<const ExpressionStatement*>(&stmt)) {
         evaluateExpression(*exprStmt->expression);
     }
+    // Обработка for цикла в executeStatement()
+    else if (auto forStmt = dynamic_cast<const ForStatement*>(&stmt)) {
+        // Инициализатор
+        if (forStmt->initializer) {
+            executeStatement(*forStmt->initializer);
+        }
+        
+        // Цикл
+        while (true) {
+            if (forStmt->condition) {
+                Value condition = evaluateExpression(*forStmt->condition);
+                if (!condition.booleanValue) break;
+            }
+            
+            executeBlock(*forStmt->body, currentEnv);
+            
+            if (forStmt->increment) {
+                evaluateExpression(*forStmt->increment);
+            }
+        }
+    }
+    else if (auto assignment = dynamic_cast<const Assignment*>(&stmt)) {
+        Value value = evaluateExpression(*assignment->value);
+        
+        if (assignment->target) {
+            // Присваивание элементу массива/объекта: arr[index] = value
+            evaluateArrayAssignment(*assignment->target, value);
+        } else {
+            // Обычное присваивание переменной
+            currentEnv->set(assignment->variableName, value);
+        }
+    }
+    else if (auto assignment = dynamic_cast<const Assignment*>(&stmt)) {
+        Value value = evaluateExpression(*assignment->value);
+        
+        if (assignment->target) {
+            // Присваивание элементу массива/объекта
+            evaluateTargetAssignment(*assignment->target, value);
+        } else {
+            // Обычное присваивание переменной
+            currentEnv->set(assignment->variableName, value);
+        }
+    }        
+}
+
+void Interpreter::evaluateTargetAssignment(const Expression& target, const Value& value) {
+    if (auto indexExpr = dynamic_cast<const IndexExpression*>(&target)) {
+        // Присваивание элементу массива: arr[index] = value
+        Value arrayVal = evaluateExpression(*indexExpr->object);
+        Value indexVal = evaluateExpression(*indexExpr->index);
+        
+        if (arrayVal.type == Value::ARRAY && indexVal.type == Value::NUMBER) {
+            int index = static_cast<int>(indexVal.numberValue);
+            
+            if (!arrayVal.arrayValue) {
+                throw std::runtime_error("Array is null");
+            }
+            
+            if (index < 0 || index >= arrayVal.arrayValue->size()) {
+                throw std::runtime_error("Array index out of bounds");
+            }
+            
+            // Обновляем элемент массива
+            (*arrayVal.arrayValue)[index] = value;
+            return;
+        }
+        throw std::runtime_error("Cannot assign to array element");
+    }
+    else if (auto propAccess = dynamic_cast<const PropertyAccess*>(&target)) {
+        // Присваивание свойству объекта: obj.property = value
+        Value objectVal = evaluateExpression(*propAccess->object);
+        
+        if (objectVal.type == Value::OBJECT) {
+            if (!objectVal.objectValue) {
+                throw std::runtime_error("Object is null");
+            }
+            
+            // Обновляем или добавляем свойство
+            (*objectVal.objectValue)[propAccess->property] = value;
+            return;
+        }
+        throw std::runtime_error("Cannot assign to object property");
+    }
+    
+    throw std::runtime_error("Invalid assignment target");
+}
+
+void Interpreter::evaluateArrayAssignment(const Expression& target, const Value& value) {
+    if (auto indexExpr = dynamic_cast<const IndexExpression*>(&target)) {
+        Value arrayVal = evaluateExpression(*indexExpr->object);
+        Value indexVal = evaluateExpression(*indexExpr->index);
+        
+        if (arrayVal.type == Value::ARRAY && indexVal.type == Value::NUMBER) {
+            int index = static_cast<int>(indexVal.numberValue);
+            
+            if (!arrayVal.arrayValue) {
+                throw std::runtime_error("Array is null");
+            }
+            
+            if (index < 0 || index >= arrayVal.arrayValue->size()) {
+                throw std::runtime_error("Array index out of bounds");
+            }
+            
+            // Обновляем элемент массива
+            (*arrayVal.arrayValue)[index] = value;
+            return;
+        }
+        throw std::runtime_error("Cannot assign to this type");
+    }
+    throw std::runtime_error("Invalid assignment target");
 }
 
 void Interpreter::executeBlock(const Block& block, std::shared_ptr<Environment> env) {

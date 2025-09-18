@@ -61,14 +61,66 @@ std::unique_ptr<Statement> Parser::parseStatement() {
         case TokenType::LEFT_BRACE:
             return parseBlock();
         case TokenType::IDENTIFIER:
-            // Если после идентификатора идет '=', то это присваивание
-            if (peek().type == TokenType::ASSIGN) {
-                return parseAssignment();
-            }
-            // Иначе это выражение
-            [[fallthrough]];
+            return parseAssignmentOrExpression();
         default:
             return parseExpressionStatement();
+    }
+}
+
+std::unique_ptr<Assignment> Parser::parseArrayAssignment(const std::string& arrayName, std::unique_ptr<Expression> index) {
+    expect(TokenType::ASSIGN, "Expected '=' after array index");
+    
+    auto value = parseExpression();
+    expect(TokenType::SEMICOLON, "Expected ';' after array assignment");
+    
+    // Создаем IndexExpression для целевого элемента
+    auto target = std::make_unique<IndexExpression>(
+        std::make_unique<Identifier>(arrayName),
+        std::move(index)  // Используем std::move
+    );
+    
+    return std::make_unique<Assignment>(arrayName, std::move(value), std::move(target));
+}
+
+std::unique_ptr<Assignment> Parser::parseAssignment(const std::string& variableName) {
+    // Текущий токен уже '='
+    expect(TokenType::ASSIGN, "Expected '=' after variable name");
+    
+    auto value = parseExpression();
+    expect(TokenType::SEMICOLON, "Expected ';' after assignment");
+    
+    return std::make_unique<Assignment>(variableName, std::move(value));
+}
+
+std::unique_ptr<Statement> Parser::parseAssignmentOrExpression() {
+    // Сохраняем позицию для отката
+    Token identifierToken = currentToken;
+    advance();
+    
+    // Проверяем, является ли это присваиванием
+    if (currentToken.type == TokenType::ASSIGN) {
+        // Это присваивание: variable = expression
+        return parseAssignment(identifierToken.lexeme);
+    }
+    else if (currentToken.type == TokenType::LEFT_BRACKET) {
+        // Это может быть присваивание элемента массива: arr[index] = value
+        advance();
+        auto index = parseExpression();
+        expect(TokenType::RIGHT_BRACKET, "Expected ']' after index");
+        
+        if (currentToken.type == TokenType::ASSIGN) {
+            // Присваивание элементу массива
+            return parseArrayAssignment(identifierToken.lexeme, std::move(index));
+        } else {
+            // Доступ к элементу массива в выражении - откатываемся
+            currentToken = identifierToken;
+            return parseExpressionStatement();
+        }
+    }
+    else {
+        // Это выражение - откатываемся
+        currentToken = identifierToken;
+        return parseExpressionStatement();
     }
 }
 
@@ -84,18 +136,6 @@ std::unique_ptr<VariableDeclaration> Parser::parseVariableDeclaration() {
     expect(TokenType::SEMICOLON, "Expected ';' after variable declaration");
     
     return std::make_unique<VariableDeclaration>(nameToken.lexeme, std::move(initializer));
-}
-
-std::unique_ptr<Assignment> Parser::parseAssignment() {
-    Token nameToken = expect(TokenType::IDENTIFIER, "Expected variable name");
-    
-    expect(TokenType::ASSIGN, "Expected '=' after variable name");
-    
-    auto value = parseExpression();
-    
-    expect(TokenType::SEMICOLON, "Expected ';' after assignment");
-    
-    return std::make_unique<Assignment>(nameToken.lexeme, std::move(value));
 }
 
 std::unique_ptr<IfStatement> Parser::parseIfStatement() {
@@ -125,60 +165,6 @@ std::unique_ptr<WhileStatement> Parser::parseWhileStatement() {
     auto body = parseBlock();
     
     return std::make_unique<WhileStatement>(std::move(condition), std::move(body));
-}
-
-std::unique_ptr<Statement> Parser::parseForStatement() {
-    expect(TokenType::FOR, "Expected 'for'");
-    expect(TokenType::LEFT_PAREN, "Expected '(' after 'for'");
-    
-    // Парсим инициализатор
-    std::unique_ptr<Statement> initializer;
-    if (currentToken.type == TokenType::LET) {
-        initializer = parseVariableDeclaration();
-    } else if (currentToken.type == TokenType::SEMICOLON) {
-        advance(); // Пропускаем точку с запятой
-        initializer = nullptr;
-    } else {
-        initializer = parseExpressionStatement();
-    }
-    
-    // Парсим условие
-    std::unique_ptr<Expression> condition;
-    if (currentToken.type != TokenType::SEMICOLON) {
-        condition = parseExpression();
-    }
-    expect(TokenType::SEMICOLON, "Expected ';' after for condition");
-    
-    // Парсим инкремент
-    std::unique_ptr<Expression> increment;
-    if (currentToken.type != TokenType::RIGHT_PAREN) {
-        increment = parseExpression();
-    }
-    expect(TokenType::RIGHT_PAREN, "Expected ')' after for clauses");
-    
-    auto body = parseBlock();
-    
-    // Преобразуем for в while
-    auto whileBody = std::make_unique<Block>();
-    if (body) {
-        whileBody->addStatement(std::move(body));
-    }
-    if (increment) {
-        whileBody->addStatement(std::make_unique<ExpressionStatement>(std::move(increment)));
-    }
-    
-    auto whileLoop = std::make_unique<WhileStatement>(
-        condition ? std::move(condition) : std::make_unique<BooleanLiteral>(true),
-        std::move(whileBody)
-    );
-    
-    auto resultBlock = std::make_unique<Block>();
-    if (initializer) {
-        resultBlock->addStatement(std::move(initializer));
-    }
-    resultBlock->addStatement(std::move(whileLoop));
-    
-    return resultBlock;
 }
 
 std::unique_ptr<FunctionDeclaration> Parser::parseFunctionDeclaration() {
@@ -214,6 +200,13 @@ std::unique_ptr<ReturnStatement> Parser::parseReturnStatement() {
     std::unique_ptr<Expression> value = nullptr;
     if (currentToken.type != TokenType::SEMICOLON) {
         value = parseExpression();
+    }
+    
+    // Убедимся, что мы действительно на точке с запятой
+    if (currentToken.type != TokenType::SEMICOLON) {
+        std::cout << "DEBUG: Before SEMICOLON error - current token: " 
+                  << tokenTypeToString(currentToken.type) 
+                  << " '" << currentToken.lexeme << "'" << std::endl;
     }
     
     expect(TokenType::SEMICOLON, "Expected ';' after return statement");
@@ -253,7 +246,24 @@ std::unique_ptr<ExpressionStatement> Parser::parseExpressionStatement() {
 }
 
 std::unique_ptr<Expression> Parser::parseExpression() {
-    return parseLogicalOr();
+    auto expr = parseLogicalOr();
+    
+    // Обработка индексов и свойств
+    while (currentToken.type == TokenType::LEFT_BRACKET || 
+           currentToken.type == TokenType::DOT) {
+        if (currentToken.type == TokenType::LEFT_BRACKET) {
+            advance(); // Пропускаем '['
+            auto index = parseExpression();
+            expect(TokenType::RIGHT_BRACKET, "Expected ']' after index");
+            expr = std::make_unique<IndexExpression>(std::move(expr), std::move(index));
+        } else if (currentToken.type == TokenType::DOT) {
+            advance(); // Пропускаем '.'
+            Token property = expect(TokenType::IDENTIFIER, "Expected property name after '.'");
+            expr = std::make_unique<PropertyAccess>(std::move(expr), property.lexeme);
+        }
+    }
+    
+    return expr;
 }
 
 std::unique_ptr<Expression> Parser::parseLogicalOr() {
@@ -312,7 +322,7 @@ std::unique_ptr<Expression> Parser::parseComparison() {
 std::unique_ptr<Expression> Parser::parseTerm() {
     auto left = parseFactor();
     
-    while (currentToken.type == TokenType::PLUS || currentToken.type == TokenType::MINUS) {
+    while (currentToken.type == TokenType::MULTIPLY || currentToken.type == TokenType::DIVIDE) {
         Token op = currentToken;
         advance();
         auto right = parseFactor();
@@ -325,7 +335,7 @@ std::unique_ptr<Expression> Parser::parseTerm() {
 std::unique_ptr<Expression> Parser::parseFactor() {
     auto left = parseUnary();
     
-    while (currentToken.type == TokenType::MULTIPLY || currentToken.type == TokenType::DIVIDE) {
+    while (currentToken.type == TokenType::PLUS || currentToken.type == TokenType::MINUS) {
         Token op = currentToken;
         advance();
         auto right = parseUnary();
@@ -389,6 +399,16 @@ std::unique_ptr<Expression> Parser::parsePrimary() {
             return expression;
         }
         
+        case TokenType::LEFT_BRACKET:
+            return parseArrayLiteral();
+            
+        case TokenType::LEFT_BRACE:
+            return parseObjectLiteral();
+            
+        case TokenType::NULL_TOKEN:
+            advance();
+            return std::make_unique<NullLiteral>();
+
         default:
             throw std::runtime_error("Expected expression, got: " + tokenTypeToString(currentToken.type));
     }
@@ -416,4 +436,86 @@ std::unique_ptr<FunctionCall> Parser::parseFunctionCall(const std::string& funct
     expect(TokenType::RIGHT_PAREN, "Expected ')' after function arguments");
     
     return std::make_unique<FunctionCall>(functionName, std::move(arguments));
+}
+
+// Новые методы парсинга
+std::unique_ptr<Expression> Parser::parseArrayLiteral() {
+    expect(TokenType::LEFT_BRACKET, "Expected '['");
+    
+    std::vector<std::unique_ptr<Expression>> elements;
+    if (currentToken.type != TokenType::RIGHT_BRACKET) {
+        do {
+            elements.push_back(parseExpression());
+            if (currentToken.type != TokenType::COMMA) {
+                break;
+            }
+            advance();
+        } while (true);
+    }
+    
+    expect(TokenType::RIGHT_BRACKET, "Expected ']' after array elements");
+    return std::make_unique<ArrayLiteral>(std::move(elements));
+}
+
+std::unique_ptr<Expression> Parser::parseObjectLiteral() {
+    expect(TokenType::LEFT_BRACE, "Expected '{'");
+    
+    std::vector<std::pair<std::string, std::unique_ptr<Expression>>> properties;
+    if (currentToken.type != TokenType::RIGHT_BRACE) {
+        do {
+            Token key = expect(TokenType::STRING, "Expected string key");
+            expect(TokenType::COLON, "Expected ':' after key");
+            auto value = parseExpression();
+            
+            properties.emplace_back(key.lexeme, std::move(value));
+            
+            if (currentToken.type != TokenType::COMMA) {
+                break;
+            }
+            advance();
+        } while (true);
+    }
+    
+    expect(TokenType::RIGHT_BRACE, "Expected '}' after object properties");
+    return std::make_unique<ObjectLiteral>(std::move(properties));
+}
+
+// Парсинг for цикла
+std::unique_ptr<Statement> Parser::parseForStatement() {
+    expect(TokenType::FOR, "Expected 'for'");
+    expect(TokenType::LEFT_PAREN, "Expected '(' after 'for'");
+    
+    // Инициализатор
+    std::unique_ptr<Statement> initializer;
+    if (currentToken.type == TokenType::LET) {
+        initializer = parseVariableDeclaration();
+    } else if (currentToken.type == TokenType::SEMICOLON) {
+        advance(); // Пропускаем ';'
+        initializer = nullptr;
+    } else {
+        initializer = parseExpressionStatement();
+    }
+    
+    // Условие
+    std::unique_ptr<Expression> condition;
+    if (currentToken.type != TokenType::SEMICOLON) {
+        condition = parseExpression();
+    }
+    expect(TokenType::SEMICOLON, "Expected ';' after for condition");
+    
+    // Инкремент
+    std::unique_ptr<Expression> increment;
+    if (currentToken.type != TokenType::RIGHT_PAREN) {
+        increment = parseExpression();
+    }
+    expect(TokenType::RIGHT_PAREN, "Expected ')' after for clauses");
+    
+    auto body = parseBlock();
+    
+    return std::make_unique<ForStatement>(
+        std::move(initializer),
+        std::move(condition),
+        std::move(increment),
+        std::move(body)
+    );
 }

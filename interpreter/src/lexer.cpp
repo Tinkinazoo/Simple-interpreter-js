@@ -92,6 +92,7 @@ Token Lexer::identifier() {
     else if (text == "and") type = TokenType::AND;
     else if (text == "or") type = TokenType::OR;
     else if (text == "not") type = TokenType::NOT;
+    else if (text == "null") type = TokenType::NULL_TOKEN;
 
     return Token(type, text, line, column);
 }
@@ -171,6 +172,9 @@ Token Lexer::scanToken() {
             }
             return Token(TokenType::GREATER, ">", line, column);
         case '"': return string();
+        case '[': return Token(TokenType::LEFT_BRACKET, "[", line, column);
+        case ']': return Token(TokenType::RIGHT_BRACKET, "]", line, column);
+        case ':': return Token(TokenType::COLON, ":", line, column);
     }
 
     return Token(TokenType::ERROR, std::string(1, c), line, column);

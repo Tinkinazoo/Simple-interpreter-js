@@ -1,0 +1,11 @@
+let arr = [1, 2, 3, 4, 5];
+print "Array: " + arr;
+print "First element: " + arr[0];
+print "Last element: " + arr[4];
+
+arr[2] = 100;
+print "Modified: " + arr;
+
+let matrix = [[1, 2], [3, 4]];
+print "Matrix: " + matrix;
+print "Element: " + matrix[1][0];

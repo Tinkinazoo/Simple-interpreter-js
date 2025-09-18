@@ -135,15 +135,31 @@ std::unique_ptr<ASTNode> VariableDeclaration::clone() const {
 
 // Assignment
 Assignment::Assignment(const std::string& variableName, std::unique_ptr<Expression> value)
-    : variableName(variableName), value(std::move(value)) {}
+    : variableName(variableName), value(std::move(value)), target(nullptr) {}
+
+Assignment::Assignment(const std::string& variableName, std::unique_ptr<Expression> value, std::unique_ptr<Expression> target)
+    : variableName(variableName), value(std::move(value)), target(std::move(target)) {}
+
 void Assignment::print(int indent) const {
     std::cout << std::string(indent, ' ') << "Assignment(" << variableName << ")\n";
-    value->print(indent + 2);
+    if (target) {
+        std::cout << std::string(indent + 2, ' ') << "Target:\n";
+        target->print(indent + 4);
+    }
+    std::cout << std::string(indent + 2, ' ') << "Value:\n";
+    value->print(indent + 4);
 }
+
 std::unique_ptr<ASTNode> Assignment::clone() const {
+    std::unique_ptr<Expression> clonedTarget = nullptr;
+    if (target) {
+        clonedTarget = std::unique_ptr<Expression>(static_cast<Expression*>(target->clone().release()));
+    }
+    
     return std::make_unique<Assignment>(
         variableName,
-        std::unique_ptr<Expression>(static_cast<Expression*>(value->clone().release()))
+        std::unique_ptr<Expression>(static_cast<Expression*>(value->clone().release())),
+        std::move(clonedTarget)
     );
 }
 
@@ -253,4 +269,108 @@ std::unique_ptr<ASTNode> Program::clone() const {
         newProgram->addStatement(std::unique_ptr<Statement>(static_cast<Statement*>(stmt->clone().release())));
     }
     return newProgram;
+}
+
+// ArrayLiteral
+ArrayLiteral::ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements)
+    : elements(std::move(elements)) {}
+void ArrayLiteral::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "ArrayLiteral:\n";
+    for (const auto& element : elements) {
+        element->print(indent + 2);
+    }
+}
+std::unique_ptr<ASTNode> ArrayLiteral::clone() const {
+    std::vector<std::unique_ptr<Expression>> clonedElements;
+    for (const auto& element : elements) {
+        clonedElements.push_back(std::unique_ptr<Expression>(
+            static_cast<Expression*>(element->clone().release())));
+    }
+    return std::make_unique<ArrayLiteral>(std::move(clonedElements));
+}
+
+// IndexExpression
+IndexExpression::IndexExpression(std::unique_ptr<Expression> object, std::unique_ptr<Expression> index)
+    : object(std::move(object)), index(std::move(index)) {}
+void IndexExpression::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "IndexExpression:\n";
+    object->print(indent + 2);
+    index->print(indent + 2);
+}
+std::unique_ptr<ASTNode> IndexExpression::clone() const {
+    return std::make_unique<IndexExpression>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(object->clone().release())),
+        std::unique_ptr<Expression>(static_cast<Expression*>(index->clone().release()))
+    );
+}
+
+// ObjectLiteral
+ObjectLiteral::ObjectLiteral(std::vector<std::pair<std::string, std::unique_ptr<Expression>>> properties)
+    : properties(std::move(properties)) {}
+
+void ObjectLiteral::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "ObjectLiteral:\n";
+    for (const auto& [key, value] : properties) {
+        std::cout << std::string(indent + 2, ' ') << key << ":\n";
+        value->print(indent + 4);
+    }
+}
+
+std::unique_ptr<ASTNode> ObjectLiteral::clone() const {
+    std::vector<std::pair<std::string, std::unique_ptr<Expression>>> clonedProperties;
+    for (const auto& [key, value] : properties) {
+        clonedProperties.emplace_back(
+            key,
+            std::unique_ptr<Expression>(static_cast<Expression*>(value->clone().release()))
+        );
+    }
+    return std::make_unique<ObjectLiteral>(std::move(clonedProperties));
+}
+
+// PropertyAccess
+PropertyAccess::PropertyAccess(std::unique_ptr<Expression> object, const std::string& property)
+    : object(std::move(object)), property(property) {}
+
+void PropertyAccess::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "PropertyAccess: ." << property << "\n";
+    object->print(indent + 2);
+}
+
+std::unique_ptr<ASTNode> PropertyAccess::clone() const {
+    return std::make_unique<PropertyAccess>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(object->clone().release())),
+        property
+    );
+}
+
+// ForStatement
+ForStatement::ForStatement(std::unique_ptr<Statement> initializer, 
+                         std::unique_ptr<Expression> condition,
+                         std::unique_ptr<Expression> increment,
+                         std::unique_ptr<Block> body)
+    : initializer(std::move(initializer)), condition(std::move(condition)),
+      increment(std::move(increment)), body(std::move(body)) {}
+void ForStatement::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "ForStatement:\n";
+    if (initializer) initializer->print(indent + 2);
+    if (condition) condition->print(indent + 2);
+    if (increment) increment->print(indent + 2);
+    body->print(indent + 2);
+}
+std::unique_ptr<ASTNode> ForStatement::clone() const {
+    return std::make_unique<ForStatement>(
+        initializer ? std::unique_ptr<Statement>(static_cast<Statement*>(initializer->clone().release())) : nullptr,
+        condition ? std::unique_ptr<Expression>(static_cast<Expression*>(condition->clone().release())) : nullptr,
+        increment ? std::unique_ptr<Expression>(static_cast<Expression*>(increment->clone().release())) : nullptr,
+        std::unique_ptr<Block>(static_cast<Block*>(body->clone().release()))
+    );
+}
+
+// NullLiteral
+NullLiteral::NullLiteral() {}
+void NullLiteral::print(int indent) const {
+    std::cout << std::string(indent, ' ') << "NullLiteral\n";
+}
+std::unique_ptr<ASTNode> NullLiteral::clone() const {
+    return std::make_unique<NullLiteral>();
 }

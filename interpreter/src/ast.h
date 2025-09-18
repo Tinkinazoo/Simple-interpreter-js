@@ -5,6 +5,7 @@
 #include <string>
 #include <memory>
 #include <iostream>
+#include <utility> 
 
 // Базовый класс для всех узлов AST
 class ASTNode {
@@ -129,7 +130,12 @@ class Assignment : public Statement {
 public:
     std::string variableName;
     std::unique_ptr<Expression> value;
+    std::unique_ptr<Expression> target; // Для присваивания элементам массива/объекта
+    
+    // ОБА конструктора должны быть объявлены
     Assignment(const std::string& variableName, std::unique_ptr<Expression> value);
+    Assignment(const std::string& variableName, std::unique_ptr<Expression> value, std::unique_ptr<Expression> target);
+    
     void print(int indent) const override;
     std::unique_ptr<ASTNode> clone() const override;
 };
@@ -194,4 +200,64 @@ public:
     std::unique_ptr<ASTNode> clone() const override;
 };
 
+// Массив
+class ArrayLiteral : public Expression {
+public:
+    std::vector<std::unique_ptr<Expression>> elements;
+    ArrayLiteral(std::vector<std::unique_ptr<Expression>> elements);
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
+
+// Доступ по индексу
+class IndexExpression : public Expression {
+public:
+    std::unique_ptr<Expression> object;
+    std::unique_ptr<Expression> index;
+    IndexExpression(std::unique_ptr<Expression> object, std::unique_ptr<Expression> index);
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
+
+// Объект
+class ObjectLiteral : public Expression {
+public:
+    std::vector<std::pair<std::string, std::unique_ptr<Expression>>> properties;
+    ObjectLiteral(std::vector<std::pair<std::string, std::unique_ptr<Expression>>> properties);
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
+
+// Доступ к свойству
+class PropertyAccess : public Expression {
+public:
+    std::unique_ptr<Expression> object;
+    std::string property;
+    PropertyAccess(std::unique_ptr<Expression> object, const std::string& property);
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
+
+// Цикл for
+class ForStatement : public Statement {
+public:
+    std::unique_ptr<Statement> initializer;
+    std::unique_ptr<Expression> condition;
+    std::unique_ptr<Expression> increment;
+    std::unique_ptr<Block> body;
+    ForStatement(std::unique_ptr<Statement> initializer, 
+                 std::unique_ptr<Expression> condition,
+                 std::unique_ptr<Expression> increment,
+                 std::unique_ptr<Block> body);
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
+
+// Null литерал
+class NullLiteral : public Expression {
+public:
+    NullLiteral();
+    void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
+};
 #endif // AST_H

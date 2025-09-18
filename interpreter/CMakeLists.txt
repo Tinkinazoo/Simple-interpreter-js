@@ -56,6 +56,10 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_programs)
     endforeach()
 endif()
 
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug) # Или Release, RelWithDebInfo, MinSizeRel
+endif()
+
 # Информация о проекте
 message(STATUS "Project: ${PROJECT_NAME}")
 message(STATUS "C++ Standard: ${CMAKE_CXX_STANDARD}")

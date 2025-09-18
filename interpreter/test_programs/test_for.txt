@@ -1,0 +1,10 @@
+// Классический for
+for (let i = 0; i < 5; i = i + 1) {
+    print "i = " + i;
+}
+
+// For с массивом
+let numbers = [10, 20, 30, 40];
+for (let i = 0; i < numbers.length; i = i + 1) {
+    print "numbers[" + i + "] = " + numbers[i];
+}

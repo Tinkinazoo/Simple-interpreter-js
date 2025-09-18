@@ -8,11 +8,12 @@
 class Parser {
 private:
     Lexer& lexer;
-    Token currentToken{TokenType::END_OF_FILE, "", 0, 0}; // Инициализация по умолчанию
+    Token currentToken{TokenType::END_OF_FILE, "", 0, 0};
 
     void advance();
     Token expect(TokenType expectedType, const std::string& errorMessage);
     Token peek();
+    
     std::unique_ptr<Expression> parseExpression();
     std::unique_ptr<Expression> parseLogicalOr();
     std::unique_ptr<Expression> parseLogicalAnd();
@@ -23,10 +24,14 @@ private:
     std::unique_ptr<Expression> parseUnary();
     std::unique_ptr<Expression> parsePrimary();
     std::unique_ptr<FunctionCall> parseFunctionCall(const std::string& functionName);
+    std::unique_ptr<Expression> parseArrayLiteral();
+    std::unique_ptr<Expression> parseObjectLiteral();
     
     std::unique_ptr<Statement> parseStatement();
+    std::unique_ptr<Statement> parseAssignmentOrExpression(); // НОВЫЙ МЕТОД
     std::unique_ptr<VariableDeclaration> parseVariableDeclaration();
-    std::unique_ptr<Assignment> parseAssignment();
+    std::unique_ptr<Assignment> parseAssignment(const std::string& variableName);
+    std::unique_ptr<Assignment> parseArrayAssignment(const std::string& arrayName, std::unique_ptr<Expression> index); // НОВЫЙ МЕТОД
     std::unique_ptr<IfStatement> parseIfStatement();
     std::unique_ptr<WhileStatement> parseWhileStatement();
     std::unique_ptr<Statement> parseForStatement();

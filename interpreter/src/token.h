@@ -7,7 +7,7 @@
 enum class TokenType {
     // Ключевые слова
     LET, IF, ELSE, WHILE, FOR, FUN, RETURN, PRINT,
-    TRUE, FALSE, AND, OR, NOT,
+    TRUE, FALSE, AND, OR, NOT, DOT,
     
     // Идентификаторы и литералы
     IDENTIFIER, NUMBER, STRING,
@@ -21,7 +21,18 @@ enum class TokenType {
     COMMA, SEMICOLON,
     
     // Специальные токены
-    END_OF_FILE, ERROR
+    END_OF_FILE, ERROR,
+
+        // Новые токены для массивов и объектов
+    LEFT_BRACKET,    // [
+    RIGHT_BRACKET,   // ]
+    COLON,           // :
+    
+    // Новые ключевые слова
+    IN,              // for..in (для будущего)
+    NULL_TOKEN,      // null
+
+
 };
 
 struct Token {

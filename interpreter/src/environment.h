@@ -7,9 +7,13 @@
 #include <vector>
 #include "ast.h"
 
+// Forward declarations
+class Block;
+class Expression;
+
 class Value {
 public:
-    enum Type { NUMBER, STRING, BOOLEAN, FUNCTION, NIL };
+    enum Type { NUMBER, STRING, BOOLEAN, FUNCTION, NIL, ARRAY, OBJECT };
     
     Type type;
     double numberValue;
@@ -20,12 +24,26 @@ public:
     std::vector<std::string> parameters;
     std::shared_ptr<Block> body;
     
+    // Для массивов и объектов
+    std::unique_ptr<std::vector<Value>> arrayValue;
+    std::unique_ptr<std::unordered_map<std::string, Value>> objectValue;
+
+    // Конструкторы
     Value();
     Value(double value);
     Value(const std::string& value);
     Value(bool value);
     Value(const std::vector<std::string>& params, std::shared_ptr<Block> body);
+    Value(const std::vector<Value>& array); // НОВЫЙ
+    Value(const std::unordered_map<std::string, Value>& object); // НОВЫЙ
     
+    // Правило пяти (Rule of Five)
+    ~Value();
+    Value(const Value& other);
+    Value(Value&& other) noexcept;
+    Value& operator=(const Value& other);
+    Value& operator=(Value&& other) noexcept;
+
     std::string toString() const;
 };
 
