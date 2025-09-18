@@ -13,7 +13,7 @@ private:
     int column;
 
     char advance();
-    char peek();
+    char peekChar();
     char peekNext();
     bool isAtEnd();
     bool isDigit(char c);
@@ -26,10 +26,11 @@ private:
     TokenType checkKeyword(int start, int length, const std::string& rest, TokenType type);
     void skipWhitespace();
     Token scanToken();
-
+    
 public:
     Lexer(const std::string& source);
     Token getNextToken();
+    Token peek();
 };
 
 #endif // LEXER_H

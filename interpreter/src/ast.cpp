@@ -6,11 +6,17 @@ NumberLiteral::NumberLiteral(double value) : value(value) {}
 void NumberLiteral::print(int indent) const {
     std::cout << std::string(indent, ' ') << "NumberLiteral(" << value << ")\n";
 }
+std::unique_ptr<ASTNode> NumberLiteral::clone() const {
+    return std::make_unique<NumberLiteral>(value);
+}
 
 // StringLiteral
 StringLiteral::StringLiteral(const std::string& value) : value(value) {}
 void StringLiteral::print(int indent) const {
     std::cout << std::string(indent, ' ') << "StringLiteral(\"" << value << "\")\n";
+}
+std::unique_ptr<ASTNode> StringLiteral::clone() const {
+    return std::make_unique<StringLiteral>(value);
 }
 
 // BooleanLiteral
@@ -18,11 +24,17 @@ BooleanLiteral::BooleanLiteral(bool value) : value(value) {}
 void BooleanLiteral::print(int indent) const {
     std::cout << std::string(indent, ' ') << "BooleanLiteral(" << (value ? "true" : "false") << ")\n";
 }
+std::unique_ptr<ASTNode> BooleanLiteral::clone() const {
+    return std::make_unique<BooleanLiteral>(value);
+}
 
 // Identifier
 Identifier::Identifier(const std::string& name) : name(name) {}
 void Identifier::print(int indent) const {
     std::cout << std::string(indent, ' ') << "Identifier(" << name << ")\n";
+}
+std::unique_ptr<ASTNode> Identifier::clone() const {
+    return std::make_unique<Identifier>(name);
 }
 
 // BinaryOperation
@@ -33,6 +45,13 @@ void BinaryOperation::print(int indent) const {
     left->print(indent + 2);
     right->print(indent + 2);
 }
+std::unique_ptr<ASTNode> BinaryOperation::clone() const {
+    return std::make_unique<BinaryOperation>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(left->clone().release())),
+        op,
+        std::unique_ptr<Expression>(static_cast<Expression*>(right->clone().release()))
+    );
+}
 
 // UnaryOperation
 UnaryOperation::UnaryOperation(const std::string& op, std::unique_ptr<Expression> operand)
@@ -40,6 +59,12 @@ UnaryOperation::UnaryOperation(const std::string& op, std::unique_ptr<Expression
 void UnaryOperation::print(int indent) const {
     std::cout << std::string(indent, ' ') << "UnaryOperation(" << op << ")\n";
     operand->print(indent + 2);
+}
+std::unique_ptr<ASTNode> UnaryOperation::clone() const {
+    return std::make_unique<UnaryOperation>(
+        op,
+        std::unique_ptr<Expression>(static_cast<Expression*>(operand->clone().release()))
+    );
 }
 
 // FunctionCall
@@ -51,6 +76,13 @@ void FunctionCall::print(int indent) const {
         arg->print(indent + 2);
     }
 }
+std::unique_ptr<ASTNode> FunctionCall::clone() const {
+    std::vector<std::unique_ptr<Expression>> clonedArgs;
+    for (const auto& arg : arguments) {
+        clonedArgs.push_back(std::unique_ptr<Expression>(static_cast<Expression*>(arg->clone().release())));
+    }
+    return std::make_unique<FunctionCall>(functionName, std::move(clonedArgs));
+}
 
 // ExpressionStatement
 ExpressionStatement::ExpressionStatement(std::unique_ptr<Expression> expression)
@@ -58,6 +90,11 @@ ExpressionStatement::ExpressionStatement(std::unique_ptr<Expression> expression)
 void ExpressionStatement::print(int indent) const {
     std::cout << std::string(indent, ' ') << "ExpressionStatement:\n";
     expression->print(indent + 2);
+}
+std::unique_ptr<ASTNode> ExpressionStatement::clone() const {
+    return std::make_unique<ExpressionStatement>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(expression->clone().release()))
+    );
 }
 
 // Block
@@ -71,6 +108,13 @@ void Block::print(int indent) const {
         stmt->print(indent + 2);
     }
 }
+std::unique_ptr<ASTNode> Block::clone() const {
+    auto newBlock = std::make_unique<Block>();
+    for (const auto& stmt : statements) {
+        newBlock->addStatement(std::unique_ptr<Statement>(static_cast<Statement*>(stmt->clone().release())));
+    }
+    return newBlock;
+}
 
 // VariableDeclaration
 VariableDeclaration::VariableDeclaration(const std::string& variableName, std::unique_ptr<Expression> initializer)
@@ -81,6 +125,13 @@ void VariableDeclaration::print(int indent) const {
         initializer->print(indent + 2);
     }
 }
+std::unique_ptr<ASTNode> VariableDeclaration::clone() const {
+    std::unique_ptr<Expression> clonedInitializer = nullptr;
+    if (initializer) {
+        clonedInitializer = std::unique_ptr<Expression>(static_cast<Expression*>(initializer->clone().release()));
+    }
+    return std::make_unique<VariableDeclaration>(variableName, std::move(clonedInitializer));
+}
 
 // Assignment
 Assignment::Assignment(const std::string& variableName, std::unique_ptr<Expression> value)
@@ -88,6 +139,12 @@ Assignment::Assignment(const std::string& variableName, std::unique_ptr<Expressi
 void Assignment::print(int indent) const {
     std::cout << std::string(indent, ' ') << "Assignment(" << variableName << ")\n";
     value->print(indent + 2);
+}
+std::unique_ptr<ASTNode> Assignment::clone() const {
+    return std::make_unique<Assignment>(
+        variableName,
+        std::unique_ptr<Expression>(static_cast<Expression*>(value->clone().release()))
+    );
 }
 
 // IfStatement
@@ -103,6 +160,17 @@ void IfStatement::print(int indent) const {
         elseBlock->print(indent + 2);
     }
 }
+std::unique_ptr<ASTNode> IfStatement::clone() const {
+    std::unique_ptr<Block> clonedElseBlock = nullptr;
+    if (elseBlock) {
+        clonedElseBlock = std::unique_ptr<Block>(static_cast<Block*>(elseBlock->clone().release()));
+    }
+    return std::make_unique<IfStatement>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(condition->clone().release())),
+        std::unique_ptr<Block>(static_cast<Block*>(thenBlock->clone().release())),
+        std::move(clonedElseBlock)
+    );
+}
 
 // WhileStatement
 WhileStatement::WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Block> body)
@@ -113,6 +181,12 @@ void WhileStatement::print(int indent) const {
     std::cout << std::string(indent, ' ') << "Body:\n";
     body->print(indent + 2);
 }
+std::unique_ptr<ASTNode> WhileStatement::clone() const {
+    return std::make_unique<WhileStatement>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(condition->clone().release())),
+        std::unique_ptr<Block>(static_cast<Block*>(body->clone().release()))
+    );
+}
 
 // ReturnStatement
 ReturnStatement::ReturnStatement(std::unique_ptr<Expression> value) : value(std::move(value)) {}
@@ -122,12 +196,24 @@ void ReturnStatement::print(int indent) const {
         value->print(indent + 2);
     }
 }
+std::unique_ptr<ASTNode> ReturnStatement::clone() const {
+    std::unique_ptr<Expression> clonedValue = nullptr;
+    if (value) {
+        clonedValue = std::unique_ptr<Expression>(static_cast<Expression*>(value->clone().release()));
+    }
+    return std::make_unique<ReturnStatement>(std::move(clonedValue));
+}
 
 // PrintStatement
 PrintStatement::PrintStatement(std::unique_ptr<Expression> expression) : expression(std::move(expression)) {}
 void PrintStatement::print(int indent) const {
     std::cout << std::string(indent, ' ') << "PrintStatement:\n";
     expression->print(indent + 2);
+}
+std::unique_ptr<ASTNode> PrintStatement::clone() const {
+    return std::make_unique<PrintStatement>(
+        std::unique_ptr<Expression>(static_cast<Expression*>(expression->clone().release()))
+    );
 }
 
 // FunctionDeclaration
@@ -142,6 +228,13 @@ void FunctionDeclaration::print(int indent) const {
     std::cout << "\n";
     body->print(indent + 2);
 }
+std::unique_ptr<ASTNode> FunctionDeclaration::clone() const {
+    return std::make_unique<FunctionDeclaration>(
+        functionName,
+        parameters,
+        std::unique_ptr<Block>(static_cast<Block*>(body->clone().release()))
+    );
+}
 
 // Program
 Program::Program() {}
@@ -153,4 +246,11 @@ void Program::print(int indent) const {
     for (const auto& stmt : statements) {
         stmt->print(indent + 2);
     }
+}
+std::unique_ptr<ASTNode> Program::clone() const {
+    auto newProgram = std::make_unique<Program>();
+    for (const auto& stmt : statements) {
+        newProgram->addStatement(std::unique_ptr<Statement>(static_cast<Statement*>(stmt->clone().release())));
+    }
+    return newProgram;
 }

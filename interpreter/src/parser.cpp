@@ -60,6 +60,13 @@ std::unique_ptr<Statement> Parser::parseStatement() {
             return parsePrintStatement();
         case TokenType::LEFT_BRACE:
             return parseBlock();
+        case TokenType::IDENTIFIER:
+            // Если после идентификатора идет '=', то это присваивание
+            if (peek().type == TokenType::ASSIGN) {
+                return parseAssignment();
+            }
+            // Иначе это выражение
+            [[fallthrough]];
         default:
             return parseExpressionStatement();
     }
@@ -98,17 +105,16 @@ std::unique_ptr<IfStatement> Parser::parseIfStatement() {
     auto condition = parseExpression();
     expect(TokenType::RIGHT_PAREN, "Expected ')' after condition");
     
-    auto thenBlock = parseBlock();
+    auto thenBlock = parseBlock();  // Должен парсить блок { }
     
     std::unique_ptr<Block> elseBlock = nullptr;
     if (currentToken.type == TokenType::ELSE) {
         advance();
-        elseBlock = parseBlock();
+        elseBlock = parseBlock();  // Должен парсить блок { }
     }
     
     return std::make_unique<IfStatement>(std::move(condition), std::move(thenBlock), std::move(elseBlock));
 }
-
 std::unique_ptr<WhileStatement> Parser::parseWhileStatement() {
     expect(TokenType::WHILE, "Expected 'while'");
     
@@ -226,7 +232,7 @@ std::unique_ptr<PrintStatement> Parser::parsePrintStatement() {
 }
 
 std::unique_ptr<Block> Parser::parseBlock() {
-    expect(TokenType::LEFT_BRACE, "Expected '{'");
+    expect(TokenType::LEFT_BRACE, "Expected '{'");  // Должен ожидать {
     
     auto block = std::make_unique<Block>();
     
@@ -235,7 +241,7 @@ std::unique_ptr<Block> Parser::parseBlock() {
         block->addStatement(parseStatement());
     }
     
-    expect(TokenType::RIGHT_BRACE, "Expected '}' after block");
+    expect(TokenType::RIGHT_BRACE, "Expected '}' after block");  // Должен ожидать }
     
     return block;
 }
@@ -386,6 +392,10 @@ std::unique_ptr<Expression> Parser::parsePrimary() {
         default:
             throw std::runtime_error("Expected expression, got: " + tokenTypeToString(currentToken.type));
     }
+}
+
+Token Parser::peek() {
+    return lexer.peek();  // Предполагая, что в Lexer есть метод peek()
 }
 
 std::unique_ptr<FunctionCall> Parser::parseFunctionCall(const std::string& functionName) {

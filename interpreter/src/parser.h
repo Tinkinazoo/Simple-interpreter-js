@@ -12,7 +12,7 @@ private:
 
     void advance();
     Token expect(TokenType expectedType, const std::string& errorMessage);
-    
+    Token peek();
     std::unique_ptr<Expression> parseExpression();
     std::unique_ptr<Expression> parseLogicalOr();
     std::unique_ptr<Expression> parseLogicalAnd();

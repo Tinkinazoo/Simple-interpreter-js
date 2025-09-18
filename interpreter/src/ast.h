@@ -11,12 +11,14 @@ class ASTNode {
 public:
     virtual ~ASTNode() = default;
     virtual void print(int indent = 0) const = 0;
+    virtual std::unique_ptr<ASTNode> clone() const = 0;
 };
 
 // Выражения
 class Expression : public ASTNode {
 public:
     virtual ~Expression() = default;
+    virtual std::unique_ptr<ASTNode> clone() const override = 0;
 };
 
 // Числовой литерал
@@ -25,6 +27,7 @@ public:
     double value;
     NumberLiteral(double value);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Строковый литерал
@@ -33,6 +36,7 @@ public:
     std::string value;
     StringLiteral(const std::string& value);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Булев литерал
@@ -41,6 +45,7 @@ public:
     bool value;
     BooleanLiteral(bool value);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Идентификатор
@@ -49,6 +54,7 @@ public:
     std::string name;
     Identifier(const std::string& name);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Бинарная операция
@@ -59,6 +65,7 @@ public:
     std::unique_ptr<Expression> right;
     BinaryOperation(std::unique_ptr<Expression> left, const std::string& op, std::unique_ptr<Expression> right);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Унарная операция
@@ -68,6 +75,7 @@ public:
     std::unique_ptr<Expression> operand;
     UnaryOperation(const std::string& op, std::unique_ptr<Expression> operand);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Вызов функции
@@ -77,12 +85,14 @@ public:
     std::vector<std::unique_ptr<Expression>> arguments;
     FunctionCall(const std::string& functionName, std::vector<std::unique_ptr<Expression>> arguments);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Операторы
 class Statement : public ASTNode {
 public:
     virtual ~Statement() = default;
+    virtual std::unique_ptr<ASTNode> clone() const override = 0;
 };
 
 // Выражение как оператор
@@ -91,6 +101,7 @@ public:
     std::unique_ptr<Expression> expression;
     ExpressionStatement(std::unique_ptr<Expression> expression);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Блок кода
@@ -100,6 +111,7 @@ public:
     Block();
     void addStatement(std::unique_ptr<Statement> stmt);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Объявление переменной
@@ -109,6 +121,7 @@ public:
     std::unique_ptr<Expression> initializer;
     VariableDeclaration(const std::string& variableName, std::unique_ptr<Expression> initializer);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Присваивание
@@ -118,6 +131,7 @@ public:
     std::unique_ptr<Expression> value;
     Assignment(const std::string& variableName, std::unique_ptr<Expression> value);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Оператор if
@@ -128,6 +142,7 @@ public:
     std::unique_ptr<Block> elseBlock;
     IfStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Block> thenBlock, std::unique_ptr<Block> elseBlock);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Цикл while
@@ -137,6 +152,7 @@ public:
     std::unique_ptr<Block> body;
     WhileStatement(std::unique_ptr<Expression> condition, std::unique_ptr<Block> body);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Оператор return
@@ -145,6 +161,7 @@ public:
     std::unique_ptr<Expression> value;
     ReturnStatement(std::unique_ptr<Expression> value);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Оператор print
@@ -153,6 +170,7 @@ public:
     std::unique_ptr<Expression> expression;
     PrintStatement(std::unique_ptr<Expression> expression);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Объявление функции
@@ -163,6 +181,7 @@ public:
     std::unique_ptr<Block> body;
     FunctionDeclaration(const std::string& functionName, const std::vector<std::string>& parameters, std::unique_ptr<Block> body);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 // Программа
@@ -172,6 +191,7 @@ public:
     Program();
     void addStatement(std::unique_ptr<Statement> stmt);
     void print(int indent) const override;
+    std::unique_ptr<ASTNode> clone() const override;
 };
 
 #endif // AST_H

@@ -173,8 +173,12 @@ void Interpreter::executeStatement(const Statement& stmt) {
         throw ReturnValue(returnValue);
     }
     else if (auto funcDecl = dynamic_cast<const FunctionDeclaration*>(&stmt)) {
-        // Используем shared_ptr вместо unique_ptr
-        Value funcValue(funcDecl->parameters, std::shared_ptr<Block>(funcDecl->body.get()));
+        // Глубокое копирование блока функции
+        auto clonedBody = std::shared_ptr<Block>(
+            static_cast<Block*>(funcDecl->body->clone().release())
+        );
+        
+        Value funcValue(funcDecl->parameters, clonedBody);
         currentEnv->define(funcDecl->functionName, funcValue);
     }
     else if (auto block = dynamic_cast<const Block*>(&stmt)) {

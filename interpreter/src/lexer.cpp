@@ -18,7 +18,7 @@ char Lexer::advance() {
     return c;
 }
 
-char Lexer::peek() {
+char Lexer::peekChar() {
     if (isAtEnd()) return '\0';
     return source[current];
 }
@@ -45,8 +45,8 @@ bool Lexer::isAlphaNumeric(char c) {
 }
 
 Token Lexer::string() {
-    while (peek() != '"' && !isAtEnd()) {
-        if (peek() == '\n') line++;
+    while (peekChar() != '"' && !isAtEnd()) {
+        if (peekChar() == '\n') line++;
         advance();
     }
 
@@ -61,11 +61,11 @@ Token Lexer::string() {
 }
 
 Token Lexer::number() {
-    while (isDigit(peek())) advance();
+    while (isDigit(peekChar())) advance();
 
-    if (peek() == '.' && isDigit(peekNext())) {
+    if (peekChar() == '.' && isDigit(peekNext())) {
         advance();
-        while (isDigit(peek())) advance();
+        while (isDigit(peekChar())) advance();
     }
 
     std::string value = source.substr(start, current - start);
@@ -73,7 +73,7 @@ Token Lexer::number() {
 }
 
 Token Lexer::identifier() {
-    while (isAlphaNumeric(peek())) advance();
+    while (isAlphaNumeric(peekChar())) advance();
 
     std::string text = source.substr(start, current - start);
     TokenType type = TokenType::IDENTIFIER;
@@ -98,7 +98,7 @@ Token Lexer::identifier() {
 
 void Lexer::skipWhitespace() {
     while (true) {
-        char c = peek();
+        char c = peekChar();
         switch (c) {
             case ' ':
             case '\r':
@@ -113,7 +113,7 @@ void Lexer::skipWhitespace() {
             case '/':
                 if (peekNext() == '/') {
                     // Комментарий до конца строки
-                    while (peek() != '\n' && !isAtEnd()) advance();
+                    while (peekChar() != '\n' && !isAtEnd()) advance();
                 } else {
                     return;
                 }
@@ -147,25 +147,25 @@ Token Lexer::scanToken() {
         case '*': return Token(TokenType::MULTIPLY, "*", line, column);
         case '/': return Token(TokenType::DIVIDE, "/", line, column);
         case '=':
-            if (peek() == '=') {
+            if (peekChar() == '=') {
                 advance();
                 return Token(TokenType::EQUALS, "==", line, column);
             }
             return Token(TokenType::ASSIGN, "=", line, column);
         case '!':
-            if (peek() == '=') {
+            if (peekChar() == '=') {
                 advance();
                 return Token(TokenType::NOT_EQUALS, "!=", line, column);
             }
             break;
         case '<':
-            if (peek() == '=') {
+            if (peekChar() == '=') {
                 advance();
                 return Token(TokenType::LESS_EQUAL, "<=", line, column);
             }
             return Token(TokenType::LESS, "<", line, column);
         case '>':
-            if (peek() == '=') {
+            if (peekChar() == '=') {
                 advance();
                 return Token(TokenType::GREATER_EQUAL, ">=", line, column);
             }
@@ -178,4 +178,23 @@ Token Lexer::scanToken() {
 
 Token Lexer::getNextToken() {
     return scanToken();
+}
+
+Token Lexer::peek() {
+    // Сохраняем текущее состояние
+    int savedStart = start;
+    int savedCurrent = current;
+    int savedLine = line;
+    int savedColumn = column;
+    
+    // Получаем следующий токен
+    Token token = getNextToken();
+    
+    // Восстанавливаем состояние
+    start = savedStart;
+    current = savedCurrent;
+    line = savedLine;
+    column = savedColumn;
+    
+    return token;
 }
